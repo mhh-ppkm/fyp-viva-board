@@ -3,19 +3,42 @@
 const $=id=>document.getElementById(id);
 const cfg=window.VIVA_CONFIG;
 function toast(m){let t=document.querySelector('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}t.textContent=m;clearTimeout(toast.t);toast.t=setTimeout(()=>t.remove(),4000)}
-if(!cfg||!cfg.firebase||String(cfg.firebase.apiKey).startsWith('PASTE')){$('gateMsg').textContent='Setup is not finished: paste the Firebase config into config.js (see README).';$('btnIn').hidden=true;return}
+if(!cfg||!cfg.firebase||String(cfg.firebase.apiKey).startsWith('PASTE')){$('gateMsg').textContent='Setup is not finished: paste the Firebase config into config.js (see README).';$('gateForm').hidden=true;return}
 firebase.initializeApp(cfg.firebase);
 const auth=firebase.auth(), db=firebase.firestore();
 const okDomain=e=>!!e&&cfg.allowedDomains.some(d=>e.toLowerCase().endsWith('@'+d));
 let booted=false, role=null, user=null;
 
-$('btnIn').onclick=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{$('gateMsg').textContent='Sign-in failed: '+e.message});
+// Passwordless sign-in: email link to the USM mailbox (USM email is Microsoft 365, not Google)
+const LINK_KEY='viva.emailForSignIn';
+const linkSettings={url:location.origin+location.pathname,handleCodeInApp:true};
+let finishFn=null;
+$('gateForm').addEventListener('submit',async e=>{e.preventDefault();
+  const em=$('gateEmail').value.trim().toLowerCase();
+  if(finishFn){finishFn(em);return}
+  if(!okDomain(em)){$('gateMsg').textContent='Use your USM email (@usm.my or @student.usm.my).';return}
+  $('btnIn').disabled=true;
+  try{await auth.sendSignInLinkToEmail(em,linkSettings);try{localStorage.setItem(LINK_KEY,em)}catch(_){}
+    $('gateMsg').textContent=`Sign-in link sent to ${em}. Open your USM inbox (check Junk too) and click the link. You can close this tab.`;}
+  catch(err){$('gateMsg').textContent='Could not send the link: '+err.message}
+  finally{$('btnIn').disabled=false}});
+if(auth.isSignInWithEmailLink(location.href)){
+  let em=null;try{em=localStorage.getItem(LINK_KEY)}catch(_){}
+  const finish=async email=>{try{await auth.signInWithEmailLink(email,location.href);try{localStorage.removeItem(LINK_KEY)}catch(_){}
+      history.replaceState(null,'',location.origin+location.pathname)}
+    catch(err){finishFn=null;$('btnIn').textContent='Email me a sign-in link';$('gateMsg').textContent='This sign-in link has expired or was already used. Request a new one below. ('+err.code+')'}};
+  if(em)finish(em);
+  else{$('gateMsg').textContent='You opened the link on a different device or browser. Type the same USM email again to finish signing in.';
+    $('btnIn').textContent='Finish sign-in';
+    finishFn=finish;}
+}
 $('btnOut').onclick=()=>auth.signOut().then(()=>location.reload());
 
 auth.onAuthStateChanged(async u=>{
   user=u;
-  if(!u){$('gate').hidden=false;$('app').hidden=true;$('btnOut').hidden=true;return}
-  if(!okDomain(u.email)){$('gateMsg').textContent=`${u.email} is not a USM account. Sign in with your @usm.my or @student.usm.my email.`;await auth.signOut();return}
+  if(!u){$('gate').hidden=false;$('app').hidden=true;$('btnOut').hidden=true;$('gateForm').hidden=false;return}
+  if(!okDomain(u.email)){$('gateMsg').textContent=`${u.email} is not a USM account. Use your @usm.my or @student.usm.my email.`;await auth.signOut();return}
+  $('gateForm').hidden=true;$('gateHint').hidden=true;
   $('btnOut').hidden=false;
   try{const r=await db.doc('roles/'+u.email.toLowerCase()).get();role=r.exists?r.data().role:null}catch(_){role=null}
   $('btnAdmin').hidden=role!=='admin';
@@ -27,7 +50,7 @@ auth.onAuthStateChanged(async u=>{
   if(!staff||!vivas){
     $('gate').hidden=false;
     $('gateMsg').textContent=role==='admin'?'No schedule loaded yet. Click Admin to import viva-seed.json.':'The coordinator has not published the schedule yet.';
-    $('btnIn').hidden=true; return;
+    return;
   }
   $('gate').hidden=true;$('app').hidden=false;
   if(!booted){booted=true;window.VivaBoard.boot({staff,vivas},photos||{},{db,me:u.displayName||u.email,canWrite:role==='clerk'||role==='admin'})}
