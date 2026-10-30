@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    // Only USM staff and student Google accounts. Edit to match config.js allowedDomains.
+    function usm() { return signedIn() && request.auth.token.email.lower().matches('.*@(usm|student[.]usm)[.]my$'); }
+    function roleDoc() { return /databases/$(database)/documents/roles/$(request.auth.token.email.lower()); }
+    function isClerk() { return usm() && exists(roleDoc()) && get(roleDoc()).data.role in ['clerk', 'admin']; }
+    function isAdmin() { return usm() && exists(roleDoc()) && get(roleDoc()).data.role == 'admin'; }
+
+    match /base/{doc}    { allow read: if usm(); allow write: if isAdmin(); }
+    match /changes/{id}  { allow read: if usm(); allow write: if isClerk(); }
+    match /blocks/{id}   { allow read: if usm(); allow write: if isClerk(); }
+    match /log/{id}      { allow read: if usm(); allow create: if isClerk(); allow update, delete: if isAdmin(); }
+    match /roles/{email} {
+      allow read: if (signedIn() && request.auth.token.email.lower() == email) || isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
