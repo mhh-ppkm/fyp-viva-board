@@ -9,35 +9,45 @@ const auth=firebase.auth(), db=firebase.firestore();
 const okDomain=e=>!!e&&cfg.allowedDomains.some(d=>e.toLowerCase().endsWith('@'+d));
 let booted=false, role=null, user=null;
 
-// Passwordless sign-in: email link to the USM mailbox (USM email is Microsoft 365, not Google)
-const LINK_KEY='viva.emailForSignIn';
-const linkSettings={url:location.origin+location.pathname,handleCodeInApp:true};
-let finishFn=null;
-$('gateForm').addEventListener('submit',async e=>{e.preventDefault();
-  const em=$('gateEmail').value.trim().toLowerCase();
-  if(finishFn){finishFn(em);return}
-  if(!okDomain(em)){$('gateMsg').textContent='Use your USM email (@usm.my or @student.usm.my).';return}
+// USM email + password; the address is confirmed once through a verification email
+let gmode='in', verifyMode=false;
+function setG(m){gmode=m;document.querySelectorAll('.gseg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===m));
+  $('gatePass2Wrap').hidden=m!=='new';$('btnIn').textContent=m==='new'?'Create account':'Sign in';$('btnForgot').hidden=m==='new';
+  $('gatePass').autocomplete=m==='new'?'new-password':'current-password'}
+document.querySelectorAll('.gseg button').forEach(b=>b.onclick=()=>setG(b.dataset.g));
+const msg=t=>{$('gateMsg').textContent=t};
+const nice=e=>({'auth/invalid-credential':'Wrong email or password. If you have not made an account yet, choose "Create account".','auth/wrong-password':'Wrong password. Use "Forgot password" to reset it.','auth/user-not-found':'No account for this email yet. Choose "Create account".','auth/email-already-in-use':'This email already has an account. Choose "Sign in", or "Forgot password" if you do not remember it.','auth/weak-password':'Choose a password with at least 6 characters.','auth/too-many-requests':'Too many attempts. Wait a few minutes and try again.','auth/quota-exceeded':'The daily email limit is reached. Try again tomorrow.'}[e.code]||e.message);
+$('gateForm').addEventListener('submit',async ev=>{ev.preventDefault();
+  if(verifyMode){await auth.currentUser.reload();if(auth.currentUser.emailVerified){await auth.currentUser.getIdToken(true);location.reload()}else msg('Not confirmed yet. Click the link in the email first (check Junk), then try again.');return}
+  const em=$('gateEmail').value.trim().toLowerCase(),pw=$('gatePass').value;
+  if(!okDomain(em)){msg('Use your USM email (@usm.my or @student.usm.my).');return}
   $('btnIn').disabled=true;
-  try{await auth.sendSignInLinkToEmail(em,linkSettings);try{localStorage.setItem(LINK_KEY,em)}catch(_){}
-    $('gateMsg').textContent=`Sign-in link sent to ${em}. Open your USM inbox (check Junk too) and click the link. You can close this tab.`;}
-  catch(err){$('gateMsg').textContent='Could not send the link: '+err.message}
-  finally{$('btnIn').disabled=false}});
-if(auth.isSignInWithEmailLink(location.href)){
-  let em=null;try{em=localStorage.getItem(LINK_KEY)}catch(_){}
-  const finish=async email=>{try{await auth.signInWithEmailLink(email,location.href);try{localStorage.removeItem(LINK_KEY)}catch(_){}
-      history.replaceState(null,'',location.origin+location.pathname)}
-    catch(err){finishFn=null;$('btnIn').textContent='Email me a sign-in link';$('gateMsg').textContent='This sign-in link has expired or was already used. Request a new one below. ('+err.code+')'}};
-  if(em)finish(em);
-  else{$('gateMsg').textContent='You opened the link on a different device or browser. Type the same USM email again to finish signing in.';
-    $('btnIn').textContent='Finish sign-in';
-    finishFn=finish;}
-}
+  try{
+    if(gmode==='new'){
+      if(pw!==$('gatePass2').value){msg('The two passwords do not match.');return}
+      const c=await auth.createUserWithEmailAndPassword(em,pw);
+      await c.user.sendEmailVerification({url:location.origin+location.pathname});
+      msg(`Account created. We sent a confirmation email to ${em}. Click the link in it (check Junk too), then come back and sign in.`);
+      setG('in');
+    }else{await auth.signInWithEmailAndPassword(em,pw)}
+  }catch(e){msg(nice(e))}finally{$('btnIn').disabled=false}});
+$('btnForgot').onclick=async()=>{const em=$('gateEmail').value.trim().toLowerCase();
+  if(!okDomain(em)){msg('Type your USM email first, then click "Forgot password".');return}
+  try{await auth.sendPasswordResetEmail(em,{url:location.origin+location.pathname});msg(`Password reset email sent to ${em}. Check your inbox and Junk folder.`)}catch(e){msg(nice(e))}};
+$('btnResend').onclick=async()=>{try{await auth.currentUser.sendEmailVerification({url:location.origin+location.pathname});msg('Confirmation email sent again. Click the link in it, then press "I have confirmed".')}catch(e){msg(nice(e))}};
 $('btnOut').onclick=()=>auth.signOut().then(()=>location.reload());
 
 auth.onAuthStateChanged(async u=>{
   user=u;
-  if(!u){$('gate').hidden=false;$('app').hidden=true;$('btnOut').hidden=true;$('gateForm').hidden=false;return}
+  if(!u){$('gate').hidden=false;$('app').hidden=true;$('btnOut').hidden=true;$('gateForm').hidden=false;$('btnResend').hidden=true;return}
   if(!okDomain(u.email)){$('gateMsg').textContent=`${u.email} is not a USM account. Use your @usm.my or @student.usm.my email.`;await auth.signOut();return}
+  if(!u.emailVerified){await u.reload();}
+  if(!auth.currentUser.emailVerified){
+    $('gate').hidden=false;$('app').hidden=true;$('btnOut').hidden=false;
+    msg(`Please confirm your email first. We sent a link to ${u.email} (check Junk). After clicking it, press "I have confirmed".`);
+    $('btnResend').hidden=false;$('btnForgot').hidden=true;$('btnIn').textContent='I have confirmed';
+    verifyMode=true;$('gateEmail').closest('.field').hidden=true;$('gatePass').closest('.field').hidden=true;document.querySelector('.gseg').hidden=true;$('gatePass').required=false;$('gateEmail').required=false;
+    return;}
   $('gateForm').hidden=true;$('gateHint').hidden=true;
   $('btnOut').hidden=false;
   try{const r=await db.doc('roles/'+u.email.toLowerCase()).get();role=r.exists?r.data().role:null}catch(_){role=null}

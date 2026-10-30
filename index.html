@@ -287,7 +287,7 @@ table.t tr.c-bad td{background:var(--bad-soft)}
 .gatecard{max-width:520px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:grid;gap:12px}
 .gatecard h2{margin:0;font-size:20px}
 .gatecard p{margin:0;color:var(--muted);text-align:justify}
-.gaterow{display:flex;gap:8px;flex-wrap:wrap}.gaterow .inp{flex:1 1 220px;min-width:0}
+.gaterow{display:flex;gap:8px;flex-wrap:wrap}.gateform{display:grid;gap:10px}.gateform .field span{font-size:12px;font-weight:600;color:var(--muted)}.gseg{display:flex}.gseg button{flex:1;padding:8px;font-weight:600}
 .adm{display:grid;gap:14px}
 .adm .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
@@ -315,7 +315,7 @@ table.t tr.c-bad td{background:var(--bad-soft)}
   </div>
 </div></div>
 
-<section id="gate" class="gate wrap"><div class="gatecard"><h2>Sign in to view the viva schedule</h2><p id="gateMsg">The schedule is shared with USM staff and students only. Enter your USM email and we will send you a sign-in link.</p><form id="gateForm" class="gaterow"><input class="inp" id="gateEmail" type="email" autocomplete="email" placeholder="yourname@usm.my or @student.usm.my" required><button class="btn primary" id="btnIn" type="submit">Email me a sign-in link</button></form><p class="note" id="gateHint">Check your USM inbox (and Junk folder) for an email from noreply@fyp-viva-board.firebaseapp.com, then click the link on this same device.</p></div></section>
+<section id="gate" class="gate wrap"><div class="gatecard"><h2>Sign in to view the viva schedule</h2><p id="gateMsg">For USM staff and students only. Use your USM email (@usm.my or @student.usm.my). First time here? Choose "Create account", then confirm the email we send to your USM inbox.</p><form id="gateForm" class="gateform"><div class="seg gseg" role="group" aria-label="Sign in or create account"><button type="button" data-g="in" aria-pressed="true">Sign in</button><button type="button" data-g="new" aria-pressed="false">Create account</button></div><label class="field"><span>USM email</span><input class="inp" id="gateEmail" type="email" autocomplete="username" placeholder="yourname@usm.my" required></label><label class="field"><span>Password</span><input class="inp" id="gatePass" type="password" autocomplete="current-password" minlength="6" placeholder="At least 6 characters" required></label><label class="field" id="gatePass2Wrap" hidden><span>Type the password again</span><input class="inp" id="gatePass2" type="password" autocomplete="new-password" minlength="6"></label><div class="gaterow"><button class="btn primary" id="btnIn" type="submit">Sign in</button><button class="btn" id="btnForgot" type="button">Forgot password</button><button class="btn" id="btnResend" type="button" hidden>Resend confirmation email</button></div></form><p class="note" id="gateHint">Emails come from noreply@fyp-viva-board.firebaseapp.com. If you cannot see one, check your Junk folder. Do not use your USM login password here; choose a separate password for this board.</p></div></section>
 <main class="wrap" id="app" hidden>
   <div id="clerkbar" hidden></div>
   <section class="kpis" id="kpis"></section>
