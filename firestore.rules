@@ -2,8 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
-    // Only USM staff and student Google accounts. Edit to match config.js allowedDomains.
-    function usm() { return signedIn() && request.auth.token.email.lower().matches('.*@(usm|student[.]usm)[.]my$'); }
+    // Any signed-in Google account may view; only clerks/admins listed in /roles may change things.
+    function usm() { return signedIn(); }
     function roleDoc() { return /databases/$(database)/documents/roles/$(request.auth.token.email.lower()); }
     function isClerk() { return usm() && exists(roleDoc()) && get(roleDoc()).data.role in ['clerk', 'admin']; }
     function isAdmin() { return usm() && exists(roleDoc()) && get(roleDoc()).data.role == 'admin'; }

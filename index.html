@@ -315,7 +315,7 @@ table.t tr.c-bad td{background:var(--bad-soft)}
   </div>
 </div></div>
 
-<section id="gate" class="gate wrap"><div class="gatecard"><h2>Sign in to view the viva schedule</h2><p id="gateMsg">For USM staff and students only. Use your USM email (@usm.my or @student.usm.my). First time here? Choose "Create account", then confirm the email we send to your USM inbox.</p><form id="gateForm" class="gateform"><div class="seg gseg" role="group" aria-label="Sign in or create account"><button type="button" data-g="in" aria-pressed="true">Sign in</button><button type="button" data-g="new" aria-pressed="false">Create account</button></div><label class="field"><span>USM email</span><input class="inp" id="gateEmail" type="email" autocomplete="username" placeholder="yourname@usm.my" required></label><label class="field"><span>Password</span><input class="inp" id="gatePass" type="password" autocomplete="current-password" minlength="6" placeholder="At least 6 characters" required></label><label class="field" id="gatePass2Wrap" hidden><span>Type the password again</span><input class="inp" id="gatePass2" type="password" autocomplete="new-password" minlength="6"></label><div class="gaterow"><button class="btn primary" id="btnIn" type="submit">Sign in</button><button class="btn" id="btnForgot" type="button">Forgot password</button><button class="btn" id="btnResend" type="button" hidden>Resend confirmation email</button></div></form><p class="note" id="gateHint">Emails come from noreply@fyp-viva-board.firebaseapp.com. If you cannot see one, check your Junk folder. Do not use your USM login password here; choose a separate password for this board.</p></div></section>
+<section id="gate" class="gate wrap"><div class="gatecard"><h2>Sign in to view the viva schedule</h2><p id="gateMsg">Sign in with your Google (Gmail) account to view the schedule.</p><div class="gaterow" id="gateRow"><button class="btn primary" id="btnIn" type="button">Sign in with Google</button></div><p class="note" id="gateHint">Use any Gmail account. Clerks and the coordinator must use the Gmail address the coordinator registered for them.</p></div></section>
 <main class="wrap" id="app" hidden>
   <div id="clerkbar" hidden></div>
   <section class="kpis" id="kpis"></section>
@@ -370,8 +370,8 @@ table.t tr.c-bad td{background:var(--bad-soft)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="config.js"></script>
-<script src="board.js"></script>
-<script src="app.js"></script>
+<script src="config.js?v=5"></script>
+<script src="board.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
